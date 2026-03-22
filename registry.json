@@ -1,0 +1,11 @@
+{
+  "packages": {
+    "json": {
+      "version": "1.0.0",
+      "author": "Toorium",
+      "description": "JSON parser and encoder",
+      "url": "https://raw.githubusercontent.com/...",
+      "files": ["json.yd"]
+    }
+  }
+}
