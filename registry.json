@@ -1,11 +1,20 @@
 {
+  "registry_version": "1.0.0",
+  "updated": "2026-03-22",
   "packages": {
     "json": {
       "version": "1.0.0",
       "author": "Toorium",
-      "description": "JSON parser and encoder",
-      "url": "https://raw.githubusercontent.com/...",
+      "description": "JSON parser and encoder for Yield",
+      "license": "MIT",
       "files": ["json.yd"]
+    },
+    "http": {
+      "version": "1.0.0",
+      "author": "Toorium",
+      "description": "HTTP client plugin (GET, POST, PUT, DELETE) using WinHTTP",
+      "license": "MIT",
+      "files": ["http.dll"]
     }
   }
 }
