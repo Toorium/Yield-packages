@@ -1,0 +1,220 @@
+// json.yd v3 - with debug
+// json.yd v1.4.0
+
+var _json_src = ""
+var _json_pos = 0
+var _json_len = 0
+
+func _json_cur():
+    if _json_pos < _json_len:
+        yield _json_src[_json_pos]
+    else:
+        yield ""
+    end
+end
+
+func _json_advance():
+    add _json_pos 1
+end
+
+func _json_skip_ws():
+    run(_json_pos < _json_len):
+        var c = _json_src[_json_pos]
+        if c = " " or c = "\t" or c = "\n" or c = "\r":
+            add _json_pos 1
+        else:
+            stop
+        end
+    end
+end
+
+func _json_parse_string():
+    _json_advance()
+    var result = ""
+    run(_json_pos < _json_len):
+        var c = _json_src[_json_pos]
+        if c = "\"":
+            _json_advance()
+            stop
+        elseif c = "\\":
+            _json_advance()
+            var esc = _json_src[_json_pos]
+            if esc = "n":
+                set result result + "\n"
+            elseif esc = "t":
+                set result result + "\t"
+            elseif esc = "\"":
+                set result result + "\""
+            elseif esc = "\\":
+                set result result + "\\"
+            else:
+                set result result + esc
+            end
+            _json_advance()
+        else:
+            set result result + c
+            _json_advance()
+        end
+    end
+    yield result
+end
+
+func _json_is_digit(c):
+    if c = "0" or c = "1" or c = "2" or c = "3" or c = "4":
+        yield True
+    end
+    if c = "5" or c = "6" or c = "7" or c = "8" or c = "9":
+        yield True
+    end
+    yield False
+end
+
+func _json_parse_number():
+    var num_str = ""
+    run(_json_pos < _json_len):
+        var c = _json_src[_json_pos]
+        if c = "-" or c = "." or _json_is_digit(c):
+            set num_str num_str + c
+            _json_advance()
+        else:
+            stop
+        end
+    end
+    yield float(num_str)
+end
+
+func _json_parse_value():
+    _json_skip_ws()
+    var c = _json_cur()
+    var result = nil
+
+    if c = "\"":
+        set result _json_parse_string()
+    elseif c = "{":
+        set result _json_parse_object()
+    elseif c = "[":
+        set result _json_parse_array()
+    elseif c = "t":
+        add _json_pos 4
+        set result True
+    elseif c = "f":
+        add _json_pos 5
+        set result False
+    elseif c = "n":
+        add _json_pos 4
+        set result nil
+    else:
+        set result _json_parse_number()
+    end
+
+    yield result
+end
+
+func _json_parse_object():
+    _json_advance()
+    var obj = ("")
+    _json_skip_ws()
+    if _json_cur() = "}":
+        _json_advance()
+        yield obj
+    end
+    var running = True
+    run(running):
+        _json_skip_ws()
+        var key = _json_parse_string()
+        _json_skip_ws()
+        _json_advance()
+        _json_skip_ws()
+        var val = _json_parse_value()
+        obj.add(key: val)
+        _json_skip_ws()
+        var next = _json_cur()
+        if next = "}":
+            _json_advance()
+            set running False
+        elseif next = ",":
+            _json_advance()
+        else:
+            set running False
+        end
+    end
+    yield obj
+end
+
+func _json_parse_array():
+    _json_advance()
+    var arr = ("")
+    _json_skip_ws()
+    if _json_cur() = "]":
+        _json_advance()
+        yield arr
+    end
+    var running = True
+    run(running):
+        _json_skip_ws()
+        var val = _json_parse_value()
+        arr.add(val)
+        _json_skip_ws()
+        var next = _json_cur()
+        if next = "]":
+            _json_advance()
+            set running False
+        elseif next = ",":
+            _json_advance()
+        else:
+            set running False
+        end
+    end
+    yield arr
+end
+
+func json_parse(src):
+    set _json_src src
+    set _json_pos 0
+    set _json_len length(src)
+    yield _json_parse_value()
+end
+
+func json_encode(val):
+    var t = type(val)
+    var result = "null"
+    if t = "string":
+        set result "\"" + val + "\""
+    elseif t = "int" or t = "float":
+        set result str(val)
+    elseif t = "bool":
+        if val:
+            set result "true"
+        else:
+            set result "false"
+        end
+    elseif t = "nil":
+        set result "null"
+    elseif t = "list":
+        var out_str = "["
+        var i = 0
+        run(item, val):
+            if i > 0:
+                set out_str out_str + ", "
+            end
+            set out_str out_str + json_encode(item)
+            add i 1
+        end
+        set out_str out_str + "]"
+        set result out_str
+    elseif t = "dict":
+        var out_str = "{"
+        var keys = val.keys()
+        var i = 0
+        run(k, keys):
+            if i > 0:
+                set out_str out_str + ", "
+            end
+            set out_str out_str + "\"" + k + "\": " + json_encode(val[k])
+            add i 1
+        end
+        set out_str out_str + "}"
+        set result out_str
+    end
+    yield result
+end
